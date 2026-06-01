@@ -1,13 +1,12 @@
 import { motion } from "framer-motion";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { fadeUp, stagger } from "../lib/motion";
-import TypewriterHeading from "./TypewriterHeading";
 
 const SplineScene = lazy(() => import("./SplineScene"));
 const DESKTOP_SCENE_URL = "https://prod.spline.design/LRc0rTyPoGpqJWMy/scene.splinecode";
 const MOBILE_SCENE_URL = "https://prod.spline.design/n6DEqOr6bVrKACY3/scene.splinecode";
 const MOBILE_SCENE_QUERY = "(max-width: 767px)";
-const SPLINE_DEFER_MS = 6500;
+const SPLINE_LOAD_DELAY_MS = 1800;
 
 function getResponsiveSceneUrl() {
   if (typeof window === "undefined") return DESKTOP_SCENE_URL;
@@ -56,23 +55,20 @@ export default function Hero() {
     const scheduleIdleLoad = () => {
       deferTimer = window.setTimeout(() => {
         if ("requestIdleCallback" in window) {
-          idleId = window.requestIdleCallback(loadSpline, { timeout: 3000 });
+          idleId = window.requestIdleCallback(loadSpline, { timeout: 1500 });
           return;
         }
 
         loadSpline();
-      }, SPLINE_DEFER_MS);
+      }, SPLINE_LOAD_DELAY_MS);
     };
 
-    if (document.readyState === "complete") {
-      scheduleIdleLoad();
-    } else {
-      window.addEventListener("load", scheduleIdleLoad, { once: true });
-    }
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(scheduleIdleLoad);
+    });
 
     return () => {
       cancelled = true;
-      window.removeEventListener("load", scheduleIdleLoad);
       window.clearTimeout(deferTimer);
       if (idleId && "cancelIdleCallback" in window) {
         window.cancelIdleCallback(idleId);
@@ -113,15 +109,9 @@ export default function Hero() {
             variants={fadeUp}
             className="max-w-[15ch] text-center font-serif text-[2.1rem] font-semibold leading-[0.95] sm:text-4xl md:text-[clamp(2.65rem,7vw,6.6rem)] md:leading-[0.98]"
           >
-            <TypewriterHeading
-              delayMs={320}
-              speedMs={32}
-              lines={[
-                [{ text: "Systems Built for" }],
-                [{ text: "Those Ready to" }],
-                [{ text: "Upgrade.", className: "text-gradient" }],
-              ]}
-            />
+            <span className="block">Systems Built for</span>
+            <span className="block">Those Ready to</span>
+            <span className="block text-gradient">Upgrade.</span>
           </motion.h1>
 
           <motion.p

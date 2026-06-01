@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import type { Application } from "@splinetool/runtime";
 
 interface SplineSceneProps {
   scene: string;
   className?: string;
 }
+
+const VIEWER_SRC = "https://unpkg.com/@splinetool/viewer@1.12.96/build/spline-viewer.js";
+let viewerScriptPromise: Promise<void> | null = null;
 
 function SceneFallback() {
   return (
@@ -17,38 +19,75 @@ function SceneFallback() {
   );
 }
 
-function prepareScrollSafeCanvas(canvas: HTMLCanvasElement) {
-  canvas.style.pointerEvents = "none";
-  canvas.style.touchAction = "pan-y";
-  canvas.tabIndex = -1;
-  canvas.setAttribute("aria-hidden", "true");
+function loadViewerScript() {
+  if (viewerScriptPromise) return viewerScriptPromise;
+
+  viewerScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[src="${VIEWER_SRC}"]`,
+    );
+
+    if (existing) {
+      if (customElements.get("spline-viewer")) {
+        resolve();
+        return;
+      }
+
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = VIEWER_SRC;
+    script.async = true;
+    script.addEventListener("load", () => resolve(), { once: true });
+    script.addEventListener("error", reject, { once: true });
+    document.head.appendChild(script);
+  });
+
+  return viewerScriptPromise;
+}
+
+function createViewer(scene: string) {
+  const viewer = document.createElement("spline-viewer");
+  viewer.setAttribute("url", scene);
+  viewer.setAttribute("loading-anim-type", "none");
+  viewer.setAttribute("aria-hidden", "true");
+  viewer.tabIndex = -1;
+  viewer.style.display = "block";
+  viewer.style.width = "100%";
+  viewer.style.height = "100%";
+  viewer.style.pointerEvents = "none";
+  viewer.style.touchAction = "pan-y";
+  return viewer;
 }
 
 export default function SplineScene({ scene, className }: SplineSceneProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const canvasElement = canvas;
+    const host = hostRef.current;
+    if (!host) return;
+    const hostElement = host;
 
     let cancelled = false;
-    let app: Application | undefined;
+    let viewer: HTMLElement | undefined;
 
     async function loadScene() {
       setLoaded(false);
 
-      const { Application } = await import("@splinetool/runtime");
+      await loadViewerScript();
       if (cancelled) return;
 
-      app = new Application(canvasElement, { renderMode: "auto" });
-      await app.load(scene);
-      if (cancelled) return;
+      viewer = createViewer(scene);
+      viewer.addEventListener("load", () => {
+        if (!cancelled) setLoaded(true);
+      }, { once: true });
 
-      prepareScrollSafeCanvas(canvasElement);
-      app.requestRender();
-      setLoaded(true);
+      hostElement.replaceChildren(viewer);
     }
 
     loadScene().catch(() => {
@@ -57,7 +96,7 @@ export default function SplineScene({ scene, className }: SplineSceneProps) {
 
     return () => {
       cancelled = true;
-      app?.dispose();
+      viewer?.remove();
     };
   }, [scene]);
 
@@ -66,8 +105,8 @@ export default function SplineScene({ scene, className }: SplineSceneProps) {
       className={`pointer-events-none relative h-full w-full ${className ?? ""}`}
       style={{ touchAction: "pan-y" }}
     >
-      <canvas
-        ref={canvasRef}
+      <div
+        ref={hostRef}
         className="block h-full w-full"
         style={{ opacity: loaded ? 1 : 0, transition: "opacity 900ms ease-out" }}
       />
