@@ -1,47 +1,18 @@
-import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import type { Application, SPEObject } from "@splinetool/runtime";
+import type { Application } from "@splinetool/runtime";
 
 interface SplineSceneProps {
   scene: string;
   className?: string;
-  interactionTargetRef?: RefObject<HTMLElement | null>;
 }
 
-const FOLLOW_OBJECT_NAME = "Follow";
-const FOLLOW_OBJECT_NAME_FALLBACKS = ["follow-sphere"];
-const LERP = 0.1;
-const OFFSET = { x: 70, y: -50, z: 40 };
-
-type Vec3 = { x: number; y: number; z: number };
-
-/** Animated placeholder shown while the runtime + scene download. */
 function SceneFallback() {
   return (
-    <div className="absolute inset-0 grid place-items-center overflow-hidden">
-      <div className="depth-grid" />
-      <div className="relative grid place-items-center">
-        <motion.div
-          className="absolute h-64 w-64 rounded-full border border-[rgba(255,90,74,0.35)]"
-          style={{ boxShadow: "inset 0 0 80px rgba(255,90,74,0.25)" }}
-          animate={{ rotate: 360 }}
-          transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
-        />
-        <motion.div
-          className="absolute h-44 w-44 rounded-full border border-[rgba(255,163,154,0.4)]"
-          animate={{ rotate: -360 }}
-          transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-        />
-        <motion.div
-          className="h-20 w-20 rounded-full bg-accent/30 blur-2xl"
-          animate={{ scale: [1, 1.25, 1], opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <span className="absolute -bottom-16 font-mono text-[10px] uppercase tracking-[0.3em] text-white/35">
-          Rendering scene
-        </span>
-      </div>
+    <div className="absolute inset-0 overflow-hidden bg-[#080505]">
+      <div className="depth-grid opacity-55" />
+      <div className="absolute left-[9%] top-[20%] h-32 w-40 rounded-[45%] bg-[radial-gradient(circle_at_30%_35%,rgba(255,150,126,0.72),rgba(156,16,18,0.58)_34%,rgba(42,8,8,0.12)_70%,transparent)] blur-[1px]" />
+      <div className="absolute right-[10%] top-[43%] h-32 w-44 rounded-[44%] bg-[radial-gradient(circle_at_70%_42%,rgba(255,127,100,0.62),rgba(154,16,18,0.52)_36%,rgba(42,8,8,0.1)_72%,transparent)] blur-[1px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(42%_44%_at_50%_50%,rgba(4,3,3,0.88),rgba(8,5,5,0.44)_58%,transparent_82%)]" />
     </div>
   );
 }
@@ -53,220 +24,42 @@ function prepareScrollSafeCanvas(canvas: HTMLCanvasElement) {
   canvas.setAttribute("aria-hidden", "true");
 }
 
-function findFollowObjects(app: Application) {
-  const matchedName = [FOLLOW_OBJECT_NAME, ...FOLLOW_OBJECT_NAME_FALLBACKS].find(
-    (name) => app.findObjectByName(name),
-  );
-  if (!matchedName) return [];
-
-  return app
-    .getAllObjects()
-    .filter((object) => object.name === matchedName);
-}
-
-function snapshotPosition({ x, y, z }: Vec3): Vec3 {
-  return { x, y, z };
-}
-
-export default function SplineScene({
-  scene,
-  className,
-  interactionTargetRef,
-}: SplineSceneProps) {
+export default function SplineScene({ scene, className }: SplineSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const splineAppRef = useRef<Application | null>(null);
-  const followObjectsRef = useRef<SPEObject[]>([]);
-  const originsRef = useRef<Vec3[]>([]);
-  const targetRef = useRef<Vec3>({ x: 0, y: 0, z: 0 });
-  const currentRef = useRef<Vec3>({ x: 0, y: 0, z: 0 });
-  const rafRef = useRef(0);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas: HTMLCanvasElement = canvasRef.current;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const canvasElement = canvas;
 
     let cancelled = false;
     let app: Application | undefined;
-    let interactionTarget: HTMLElement | null = null;
-    let removePointerListeners: (() => void) | undefined;
-
-    const resetTarget = () => {
-      targetRef.current.x = 0;
-      targetRef.current.y = 0;
-      targetRef.current.z = 0;
-    };
-
-    const updateTargetFromClientPoint = (clientX: number, clientY: number) => {
-      if (!interactionTarget) return;
-
-      const rect = interactionTarget.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return;
-
-      const nx = (clientX - rect.left) / rect.width - 0.5;
-      const ny = (clientY - rect.top) / rect.height - 0.5;
-
-      targetRef.current.x = nx * OFFSET.x;
-      targetRef.current.y = ny * OFFSET.y;
-      targetRef.current.z = ny * OFFSET.z;
-    };
-
-    const isInsideInteractionTarget = (clientX: number, clientY: number) => {
-      if (!interactionTarget) return false;
-
-      const rect = interactionTarget.getBoundingClientRect();
-      return (
-        clientX >= rect.left &&
-        clientX <= rect.right &&
-        clientY >= rect.top &&
-        clientY <= rect.bottom
-      );
-    };
-
-    const updateFromClient = (clientX: number, clientY: number) => {
-      if (!isInsideInteractionTarget(clientX, clientY)) {
-        resetTarget();
-        return;
-      }
-
-      updateTargetFromClientPoint(clientX, clientY);
-    };
-
-    const handlePointer = (event: PointerEvent) => {
-      if (!event.isPrimary && event.pointerType !== "mouse") return;
-
-      updateFromClient(event.clientX, event.clientY);
-    };
-
-    const handlePointerLeave = () => {
-      resetTarget();
-    };
-
-    const bindInteractionTarget = () => {
-      removePointerListeners?.();
-      removePointerListeners = undefined;
-
-      interactionTarget = interactionTargetRef?.current ?? null;
-      if (!interactionTarget) return;
-
-      const listenerOptions: AddEventListenerOptions = { passive: true, capture: true };
-
-      interactionTarget.addEventListener("pointerdown", handlePointer, listenerOptions);
-      interactionTarget.addEventListener("pointermove", handlePointer, listenerOptions);
-      interactionTarget.addEventListener("pointerleave", handlePointerLeave, listenerOptions);
-      interactionTarget.addEventListener("pointercancel", handlePointerLeave, listenerOptions);
-
-      removePointerListeners = () => {
-        interactionTarget?.removeEventListener("pointerdown", handlePointer, listenerOptions);
-        interactionTarget?.removeEventListener("pointermove", handlePointer, listenerOptions);
-        interactionTarget?.removeEventListener("pointerleave", handlePointerLeave, listenerOptions);
-        interactionTarget?.removeEventListener("pointercancel", handlePointerLeave, listenerOptions);
-      };
-    };
-
-    const applyFollowOffset = () => {
-      const followObjects = followObjectsRef.current;
-      const origins = originsRef.current;
-      const current = currentRef.current;
-
-      followObjects.forEach((object, index) => {
-        const origin = origins[index];
-        if (!origin) return;
-
-        object.position.x = origin.x + current.x;
-        object.position.y = origin.y + current.y;
-        object.position.z = origin.z + current.z;
-      });
-    };
-
-    const tick = () => {
-      const splineApp = splineAppRef.current;
-      const followObjects = followObjectsRef.current;
-
-      if (splineApp && followObjects.length > 0) {
-        const target = targetRef.current;
-        const current = currentRef.current;
-
-        current.x += (target.x - current.x) * LERP;
-        current.y += (target.y - current.y) * LERP;
-        current.z += (target.z - current.z) * LERP;
-
-        applyFollowOffset();
-        splineApp.requestRender();
-      }
-
-      rafRef.current = window.requestAnimationFrame(tick);
-    };
-
-    function onLoad(splineApp: Application) {
-      splineAppRef.current = splineApp;
-
-      const followObjects = findFollowObjects(splineApp);
-      followObjectsRef.current = followObjects;
-
-      if (followObjects.length === 0) {
-        return;
-      }
-
-      originsRef.current = followObjects.map((object) =>
-        snapshotPosition(object.position),
-      );
-      targetRef.current = { x: 0, y: 0, z: 0 };
-      currentRef.current = { x: 0, y: 0, z: 0 };
-    }
-
-    bindInteractionTarget();
 
     async function loadScene() {
       setLoaded(false);
-      splineAppRef.current = null;
-      followObjectsRef.current = [];
-      originsRef.current = [];
 
       const { Application } = await import("@splinetool/runtime");
       if (cancelled) return;
 
-      app = new Application(canvas, { renderMode: "continuous" });
+      app = new Application(canvasElement, { renderMode: "auto" });
       await app.load(scene);
       if (cancelled) return;
 
-      prepareScrollSafeCanvas(canvas);
-      onLoad(app);
-
-      if (!cancelled) {
-        setLoaded(true);
-      }
+      prepareScrollSafeCanvas(canvasElement);
+      app.requestRender();
+      setLoaded(true);
     }
 
-    rafRef.current = window.requestAnimationFrame(tick);
     loadScene().catch(() => {
-      if (!cancelled) {
-        setLoaded(true);
-      }
+      if (!cancelled) setLoaded(false);
     });
 
     return () => {
       cancelled = true;
-      window.cancelAnimationFrame(rafRef.current);
-      removePointerListeners?.();
-
-      const followObjects = followObjectsRef.current;
-      const origins = originsRef.current;
-      followObjects.forEach((object, index) => {
-        const origin = origins[index];
-        if (!origin) return;
-        object.position.x = origin.x;
-        object.position.y = origin.y;
-        object.position.z = origin.z;
-      });
-
-      splineAppRef.current?.requestRender();
-      splineAppRef.current = null;
-      followObjectsRef.current = [];
-      originsRef.current = [];
       app?.dispose();
     };
-  }, [interactionTargetRef, scene]);
+  }, [scene]);
 
   return (
     <div
@@ -276,7 +69,7 @@ export default function SplineScene({
       <canvas
         ref={canvasRef}
         className="block h-full w-full"
-        style={{ opacity: loaded ? 1 : 0, transition: "opacity 1.3s ease-out" }}
+        style={{ opacity: loaded ? 1 : 0, transition: "opacity 900ms ease-out" }}
       />
 
       <div
@@ -284,7 +77,7 @@ export default function SplineScene({
         style={{
           opacity: loaded ? 0 : 1,
           visibility: loaded ? "hidden" : "visible",
-          transition: "opacity 0.8s ease-out",
+          transition: "opacity 500ms ease-out",
         }}
       >
         <SceneFallback />

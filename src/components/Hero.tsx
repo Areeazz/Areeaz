@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
-import SplineScene from "./SplineScene";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { fadeUp, stagger } from "../lib/motion";
 import TypewriterHeading from "./TypewriterHeading";
 
+const SplineScene = lazy(() => import("./SplineScene"));
 const DESKTOP_SCENE_URL = "https://prod.spline.design/LRc0rTyPoGpqJWMy/scene.splinecode";
 const MOBILE_SCENE_URL = "https://prod.spline.design/n6DEqOr6bVrKACY3/scene.splinecode";
 const MOBILE_SCENE_QUERY = "(max-width: 767px)";
+const SPLINE_DEFER_MS = 6500;
 
 function getResponsiveSceneUrl() {
   if (typeof window === "undefined") return DESKTOP_SCENE_URL;
@@ -16,9 +17,20 @@ function getResponsiveSceneUrl() {
     : DESKTOP_SCENE_URL;
 }
 
+function HeroSceneFallback() {
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-[#080505]">
+      <div className="depth-grid opacity-45" />
+      <div className="absolute left-[8%] top-[22%] h-28 w-36 rounded-[45%] bg-[radial-gradient(circle_at_30%_35%,rgba(255,150,126,0.58),rgba(156,16,18,0.48)_36%,rgba(42,8,8,0.08)_72%,transparent)] blur-[1px]" />
+      <div className="absolute right-[9%] top-[46%] h-28 w-40 rounded-[44%] bg-[radial-gradient(circle_at_70%_42%,rgba(255,127,100,0.54),rgba(154,16,18,0.43)_38%,rgba(42,8,8,0.08)_74%,transparent)] blur-[1px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(44%_46%_at_50%_50%,rgba(4,3,3,0.9),rgba(8,5,5,0.46)_58%,transparent_84%)]" />
+    </div>
+  );
+}
+
 export default function Hero() {
-  const heroRef = useRef<HTMLElement>(null);
   const [sceneUrl, setSceneUrl] = useState(getResponsiveSceneUrl);
+  const [shouldLoadSpline, setShouldLoadSpline] = useState(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_SCENE_QUERY);
@@ -32,9 +44,44 @@ export default function Hero() {
     return () => mediaQuery.removeEventListener("change", updateScene);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    let deferTimer = 0;
+    let idleId = 0;
+
+    const loadSpline = () => {
+      if (!cancelled) setShouldLoadSpline(true);
+    };
+
+    const scheduleIdleLoad = () => {
+      deferTimer = window.setTimeout(() => {
+        if ("requestIdleCallback" in window) {
+          idleId = window.requestIdleCallback(loadSpline, { timeout: 3000 });
+          return;
+        }
+
+        loadSpline();
+      }, SPLINE_DEFER_MS);
+    };
+
+    if (document.readyState === "complete") {
+      scheduleIdleLoad();
+    } else {
+      window.addEventListener("load", scheduleIdleLoad, { once: true });
+    }
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("load", scheduleIdleLoad);
+      window.clearTimeout(deferTimer);
+      if (idleId && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+    };
+  }, []);
+
   return (
     <header
-      ref={heroRef}
       id="top"
       className="pointer-events-auto relative h-svh min-h-[680px] w-full overflow-hidden"
       style={{ touchAction: "pan-y" }}
@@ -44,10 +91,9 @@ export default function Hero() {
         className="pointer-events-none absolute inset-0 z-0 translate-y-10 sm:translate-y-12 md:translate-y-0"
         style={{ touchAction: "pan-y" }}
       >
-        <SplineScene
-          scene={sceneUrl}
-          interactionTargetRef={heroRef}
-        />
+        <Suspense fallback={<HeroSceneFallback />}>
+          {shouldLoadSpline ? <SplineScene scene={sceneUrl} /> : <HeroSceneFallback />}
+        </Suspense>
       </motion.div>
 
       {/* integration layers — must not capture touch (pointer-events is not inherited) */}
