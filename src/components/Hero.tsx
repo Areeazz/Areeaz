@@ -1,12 +1,11 @@
 import { motion } from "framer-motion";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { fadeUp, stagger } from "../lib/motion";
 
 const SplineScene = lazy(() => import("./SplineScene"));
 const DESKTOP_SCENE_URL = "https://prod.spline.design/LRc0rTyPoGpqJWMy/scene.splinecode";
 const MOBILE_SCENE_URL = "https://prod.spline.design/n6DEqOr6bVrKACY3/scene.splinecode";
 const MOBILE_SCENE_QUERY = "(max-width: 767px)";
-const SPLINE_LOAD_DELAY_MS = 1800;
 
 function getResponsiveSceneUrl() {
   if (typeof window === "undefined") return DESKTOP_SCENE_URL;
@@ -28,8 +27,8 @@ function HeroSceneFallback() {
 }
 
 export default function Hero() {
+  const heroRef = useRef<HTMLElement>(null);
   const [sceneUrl, setSceneUrl] = useState(getResponsiveSceneUrl);
-  const [shouldLoadSpline, setShouldLoadSpline] = useState(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_SCENE_QUERY);
@@ -43,41 +42,9 @@ export default function Hero() {
     return () => mediaQuery.removeEventListener("change", updateScene);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    let deferTimer = 0;
-    let idleId = 0;
-
-    const loadSpline = () => {
-      if (!cancelled) setShouldLoadSpline(true);
-    };
-
-    const scheduleIdleLoad = () => {
-      deferTimer = window.setTimeout(() => {
-        if ("requestIdleCallback" in window) {
-          idleId = window.requestIdleCallback(loadSpline, { timeout: 1500 });
-          return;
-        }
-
-        loadSpline();
-      }, SPLINE_LOAD_DELAY_MS);
-    };
-
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(scheduleIdleLoad);
-    });
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(deferTimer);
-      if (idleId && "cancelIdleCallback" in window) {
-        window.cancelIdleCallback(idleId);
-      }
-    };
-  }, []);
-
   return (
     <header
+      ref={heroRef}
       id="top"
       className="pointer-events-auto relative h-svh min-h-[680px] w-full overflow-hidden"
       style={{ touchAction: "pan-y" }}
@@ -88,7 +55,7 @@ export default function Hero() {
         style={{ touchAction: "pan-y" }}
       >
         <Suspense fallback={<HeroSceneFallback />}>
-          {shouldLoadSpline ? <SplineScene scene={sceneUrl} /> : <HeroSceneFallback />}
+          <SplineScene scene={sceneUrl} trackingRef={heroRef} />
         </Suspense>
       </motion.div>
 

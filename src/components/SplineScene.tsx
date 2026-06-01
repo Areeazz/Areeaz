@@ -1,12 +1,29 @@
-import { useEffect, useRef, useState } from "react";
+import Spline from "@splinetool/react-spline";
+import type { Application, SPEObject } from "@splinetool/runtime";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 
 interface SplineSceneProps {
   scene: string;
+  trackingRef?: RefObject<HTMLElement | null>;
   className?: string;
 }
 
-const VIEWER_SRC = "https://unpkg.com/@splinetool/viewer@1.12.96/build/spline-viewer.js";
-let viewerScriptPromise: Promise<void> | null = null;
+type FollowObject = {
+  object: SPEObject;
+  origin: { x: number; y: number; z: number };
+  depth: number;
+};
+
+const FOLLOW_OBJECT_NAME = "Follow";
+const FOLLOW_X_RANGE = 120;
+const FOLLOW_Y_RANGE = 80;
+const FOLLOW_LERP = 0.12;
 
 function SceneFallback() {
   return (
@@ -19,96 +36,201 @@ function SceneFallback() {
   );
 }
 
-function loadViewerScript() {
-  if (viewerScriptPromise) return viewerScriptPromise;
+function isSplineObject(value: unknown): value is SPEObject {
+  if (!value || typeof value !== "object") return false;
 
-  viewerScriptPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[src="${VIEWER_SRC}"]`,
-    );
+  const candidate = value as Partial<SPEObject>;
+  return (
+    candidate.name === FOLLOW_OBJECT_NAME &&
+    !!candidate.position &&
+    typeof candidate.position.x === "number" &&
+    typeof candidate.position.y === "number" &&
+    typeof candidate.position.z === "number"
+  );
+}
 
-    if (existing) {
-      if (customElements.get("spline-viewer")) {
-        resolve();
-        return;
-      }
+function addUniqueFollowObject(
+  object: SPEObject | undefined,
+  objects: SPEObject[],
+  seen: Set<string>,
+) {
+  if (!object || object.name !== FOLLOW_OBJECT_NAME) return;
 
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", reject, { once: true });
+  const id = object.uuid || `${object.name}-${objects.length}`;
+  if (seen.has(id)) return;
+
+  seen.add(id);
+  objects.push(object);
+}
+
+function collectFollowObjects(app: Application) {
+  const objects: SPEObject[] = [];
+  const seen = new Set<string>();
+
+  addUniqueFollowObject(app.findObjectByName(FOLLOW_OBJECT_NAME), objects, seen);
+
+  for (const object of app.getAllObjects?.() ?? []) {
+    addUniqueFollowObject(object, objects, seen);
+  }
+
+  const searchChildren = (node: unknown) => {
+    if (!node || typeof node !== "object") return;
+
+    if (isSplineObject(node)) {
+      addUniqueFollowObject(node, objects, seen);
+    }
+
+    const children = (node as { children?: unknown }).children;
+    if (!Array.isArray(children)) return;
+
+    for (const child of children) {
+      searchChildren(child);
+    }
+  };
+
+  searchChildren(app.data?.scene);
+  searchChildren(app.data);
+
+  return objects.map<FollowObject>((object, index) => ({
+    object,
+    origin: { ...object.position },
+    depth: index === 0 ? 1 : 0.72,
+  }));
+}
+
+export default function SplineScene({
+  scene,
+  trackingRef,
+  className,
+}: SplineSceneProps) {
+  const appRef = useRef<Application | null>(null);
+  const followObjectsRef = useRef<FollowObject[]>([]);
+  const frameRef = useRef<number | null>(null);
+  const targetRef = useRef({ x: 0, y: 0 });
+  const currentRef = useRef({ x: 0, y: 0 });
+  const [loaded, setLoaded] = useState(false);
+
+  const stopFrame = useCallback(() => {
+    if (frameRef.current === null) return;
+
+    window.cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+  }, []);
+
+  const animateFollowObjects = useCallback(() => {
+    const current = currentRef.current;
+    const target = targetRef.current;
+
+    current.x += (target.x - current.x) * FOLLOW_LERP;
+    current.y += (target.y - current.y) * FOLLOW_LERP;
+
+    for (const follow of followObjectsRef.current) {
+      follow.object.position.x =
+        follow.origin.x + current.x * FOLLOW_X_RANGE * follow.depth;
+      follow.object.position.y =
+        follow.origin.y - current.y * FOLLOW_Y_RANGE * follow.depth;
+      follow.object.position.z = follow.origin.z;
+    }
+
+    appRef.current?.requestRender();
+
+    const isSettled =
+      Math.abs(target.x - current.x) < 0.001 &&
+      Math.abs(target.y - current.y) < 0.001;
+
+    if (isSettled) {
+      frameRef.current = null;
       return;
     }
 
-    const script = document.createElement("script");
-    script.type = "module";
-    script.src = VIEWER_SRC;
-    script.async = true;
-    script.addEventListener("load", () => resolve(), { once: true });
-    script.addEventListener("error", reject, { once: true });
-    document.head.appendChild(script);
-  });
+    frameRef.current = window.requestAnimationFrame(animateFollowObjects);
+  }, []);
 
-  return viewerScriptPromise;
-}
-
-function createViewer(scene: string) {
-  const viewer = document.createElement("spline-viewer");
-  viewer.setAttribute("url", scene);
-  viewer.setAttribute("loading-anim-type", "none");
-  viewer.setAttribute("aria-hidden", "true");
-  viewer.tabIndex = -1;
-  viewer.style.display = "block";
-  viewer.style.width = "100%";
-  viewer.style.height = "100%";
-  viewer.style.pointerEvents = "none";
-  viewer.style.touchAction = "pan-y";
-  return viewer;
-}
-
-export default function SplineScene({ scene, className }: SplineSceneProps) {
-  const hostRef = useRef<HTMLDivElement>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    const hostElement = host;
-
-    let cancelled = false;
-    let viewer: HTMLElement | undefined;
-
-    async function loadScene() {
-      setLoaded(false);
-
-      await loadViewerScript();
-      if (cancelled) return;
-
-      viewer = createViewer(scene);
-      viewer.addEventListener("load", () => {
-        if (!cancelled) setLoaded(true);
-      }, { once: true });
-
-      hostElement.replaceChildren(viewer);
+  const scheduleFollowFrame = useCallback(() => {
+    if (frameRef.current !== null || followObjectsRef.current.length === 0) {
+      return;
     }
 
-    loadScene().catch(() => {
-      if (!cancelled) setLoaded(false);
+    frameRef.current = window.requestAnimationFrame(animateFollowObjects);
+  }, [animateFollowObjects]);
+
+  const handleLoad = useCallback((app: Application) => {
+    appRef.current = app;
+    followObjectsRef.current = collectFollowObjects(app);
+    currentRef.current = { x: 0, y: 0 };
+    targetRef.current = { x: 0, y: 0 };
+
+    app.canvas.style.pointerEvents = "none";
+    app.canvas.style.touchAction = "pan-y";
+    app.canvas.tabIndex = -1;
+    app.canvas.setAttribute("aria-hidden", "true");
+
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    const trackingElement = trackingRef?.current;
+    if (!trackingElement) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const rect = trackingElement.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      targetRef.current = {
+        x: ((event.clientX - rect.left) / rect.width - 0.5) * 2,
+        y: ((event.clientY - rect.top) / rect.height - 0.5) * 2,
+      };
+      scheduleFollowFrame();
+    };
+
+    const handlePointerLeave = () => {
+      targetRef.current = { x: 0, y: 0 };
+      scheduleFollowFrame();
+    };
+
+    trackingElement.addEventListener("pointermove", handlePointerMove, {
+      passive: true,
+    });
+    trackingElement.addEventListener("pointerleave", handlePointerLeave, {
+      passive: true,
     });
 
     return () => {
-      cancelled = true;
-      viewer?.remove();
+      trackingElement.removeEventListener("pointermove", handlePointerMove);
+      trackingElement.removeEventListener("pointerleave", handlePointerLeave);
     };
-  }, [scene]);
+  }, [scheduleFollowFrame, trackingRef]);
+
+  useEffect(() => {
+    setLoaded(false);
+    appRef.current = null;
+    followObjectsRef.current = [];
+    currentRef.current = { x: 0, y: 0 };
+    targetRef.current = { x: 0, y: 0 };
+    stopFrame();
+
+    return () => {
+      stopFrame();
+      appRef.current = null;
+      followObjectsRef.current = [];
+    };
+  }, [scene, stopFrame]);
 
   return (
     <div
       className={`pointer-events-none relative h-full w-full ${className ?? ""}`}
       style={{ touchAction: "pan-y" }}
     >
-      <div
-        ref={hostRef}
+      <Spline
+        scene={scene}
+        onLoad={handleLoad}
         className="block h-full w-full"
-        style={{ opacity: loaded ? 1 : 0, transition: "opacity 900ms ease-out" }}
+        style={{
+          opacity: loaded ? 1 : 0,
+          transition: "opacity 900ms ease-out",
+          pointerEvents: "none",
+          touchAction: "pan-y",
+        }}
       />
 
       <div
