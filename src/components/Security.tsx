@@ -67,7 +67,14 @@ export default function Security() {
               variants={fadeUp}
               className="mt-5 max-w-[16ch] font-serif text-[clamp(2.05rem,10vw,2.7rem)] font-semibold leading-[1.04] md:mt-6 md:text-[clamp(2.3rem,5vw,4.75rem)] md:leading-[1]"
             >
-              <TypewriterHeading lines={[[{ text: "Security Built In" }]]} />
+              <TypewriterHeading
+                lines={[
+                  [
+                    { text: "Security " },
+                    { text: "Built In", className: "text-gradient" },
+                  ],
+                ]}
+              />
             </motion.h2>
           </div>
           <motion.p
@@ -75,8 +82,7 @@ export default function Security() {
             className="max-w-[36rem] text-[13px] leading-[1.65] text-white/50 md:text-[15px] md:leading-relaxed"
           >
             Every system is built with security in mind from the start &mdash;
-            protecting client data, customer information, payments, and business
-            workflows.
+            protecting client data, customer information, and payments.
           </motion.p>
         </motion.div>
 

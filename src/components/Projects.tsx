@@ -306,8 +306,10 @@ export default function Projects() {
             >
               <TypewriterHeading
                 lines={[
-                  [{ text: "Featured", className: "text-gradient" }],
-                  [{ text: "Builds" }],
+                  [
+                    { text: "Built " },
+                    { text: "Systems", className: "text-gradient" },
+                  ],
                 ]}
               />
             </motion.h2>

@@ -251,7 +251,14 @@ export default function Pricing() {
                   Build Standard
                 </div>
                 <h3 className="mt-3 font-serif text-[1.65rem] font-medium leading-[1.08] text-white/92 md:mt-4 md:text-[clamp(1.8rem,2.8vw,2.65rem)] md:leading-[1.06]">
-                  <TypewriterHeading lines={[[{ text: "What Every Build Includes" }]]} />
+                  <TypewriterHeading
+                    lines={[
+                      [
+                        { text: "What Every " },
+                        { text: "Build Includes", className: "text-gradient" },
+                      ],
+                    ]}
+                  />
                 </h3>
               </div>
               <p className="max-w-[29rem] text-[12px] leading-[1.6] text-white/50 md:text-[14px] md:leading-relaxed">
@@ -321,8 +328,15 @@ export default function Pricing() {
                 <span className="inline-block h-px w-6 bg-current" />
                 <span>Process</span>
               </div>
-              <h3 className="mt-4 max-w-[16ch] font-serif text-[clamp(2rem,10vw,2.55rem)] font-semibold leading-[1.04] md:mt-6 md:text-[clamp(2.25rem,4.5vw,4.35rem)] md:leading-[1]">
-                <TypewriterHeading lines={[[{ text: "Project Roadmap" }]]} />
+              <h3 className="mt-5 max-w-[16ch] font-serif text-[clamp(2.05rem,10vw,2.7rem)] font-semibold leading-[1.04] md:mt-6 md:text-[clamp(2.3rem,5vw,4.75rem)] md:leading-[1]">
+                <TypewriterHeading
+                  lines={[
+                    [
+                      { text: "Project " },
+                      { text: "Roadmap", className: "text-gradient" },
+                    ],
+                  ]}
+                />
               </h3>
             </div>
             <p className="max-w-[34rem] text-[13px] leading-[1.65] text-white/50 md:text-[15px] md:leading-relaxed">

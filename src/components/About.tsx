@@ -38,7 +38,7 @@ export default function About() {
             </motion.div>
             <motion.h2
               variants={fadeUp}
-              className="mt-4 max-w-[12ch] font-serif text-[clamp(2.05rem,10vw,2.75rem)] font-semibold leading-[1.04] md:mt-5 md:text-[clamp(2.35rem,5vw,5rem)] md:leading-[1]"
+              className="mt-5 max-w-[16ch] font-serif text-[clamp(2.05rem,10vw,2.7rem)] font-semibold leading-[1.04] md:mt-6 md:text-[clamp(2.3rem,5vw,4.75rem)] md:leading-[1]"
             >
               <TypewriterHeading
                 lines={[
@@ -53,31 +53,22 @@ export default function About() {
             variants={stagger}
             className="max-w-[68ch] text-[14px] leading-[1.65] text-white/62 md:pt-7 md:text-[16px] md:leading-[1.85]"
           >
-            <motion.p variants={fadeUp} className="md:hidden">
-              I am a 22-year-old software engineer focused on building clean,
-              reliable systems with full ownership from planning to launch.
-            </motion.p>
-            <motion.p variants={fadeUp} className="mt-4 md:hidden">
-              Every project is treated like it matters: thoughtful architecture,
-              careful execution, and a final product built around the client&apos;s
-              real workflow.
-            </motion.p>
-            <motion.p variants={fadeUp} className="hidden md:block">
+            <motion.p variants={fadeUp}>
               I am a 22-year-old software engineer committed to putting
               everything into every project regardless of size or scope.
             </motion.p>
-            <motion.p variants={fadeUp} className="mt-5 hidden md:block">
+            <motion.p variants={fadeUp} className="mt-4 md:mt-5">
               Every build is approached with the same mindset: create something
               that is clean, reliable, scalable, and worth being proud of. From
               planning and architecture to development and deployment, every
               detail matters.
             </motion.p>
-            <motion.p variants={fadeUp} className="mt-5 hidden md:block">
+            <motion.p variants={fadeUp} className="mt-4 md:mt-5">
               I work directly with clients to understand their goals, build
               around real-world workflows, and deliver systems designed to
               perform long after launch.
             </motion.p>
-            <motion.p variants={fadeUp} className="mt-5 hidden md:block">
+            <motion.p variants={fadeUp} className="mt-4 md:mt-5">
               The final product reflects both my work and the client&apos;s
               vision, which is why I take ownership of every stage of development
               and focus on getting it right.
@@ -99,7 +90,14 @@ export default function About() {
           >
             <div>
               <h3 className="mt-2 font-serif text-[1.7rem] font-medium leading-tight text-white md:mt-3 md:text-[clamp(1.8rem,3vw,3rem)]">
-                <TypewriterHeading lines={[[{ text: "Technology Stack" }]]} />
+                <TypewriterHeading
+                  lines={[
+                    [
+                      { text: "Technology " },
+                      { text: "Stack", className: "text-gradient" },
+                    ],
+                  ]}
+                />
               </h3>
             </div>
           </motion.div>

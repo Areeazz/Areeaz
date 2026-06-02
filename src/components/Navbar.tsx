@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 const LINKS = [
-  { label: "Featured Builds", href: "#work" },
+  { label: "Built Systems", href: "#work" },
   { label: "Pricing", href: "#pricing" },
   { label: "Project Roadmap", href: "#roadmap" },
   { label: "Security", href: "#security" },
