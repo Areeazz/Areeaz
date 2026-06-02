@@ -6,6 +6,7 @@ export interface Project {
   badge: string;
   title: { lead: string; accent: string };
   description: string;
+  mobileDescription?: string;
   stack: string[];
   visual: ProjectVisual;
   /** Optional real preview asset; falls back to the styled mock when absent. */

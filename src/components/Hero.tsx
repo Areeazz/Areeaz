@@ -70,15 +70,21 @@ export default function Hero() {
           variants={stagger}
           initial="hidden"
           animate="show"
-          className="flex w-full max-w-[20rem] flex-col items-center text-center [text-shadow:0_2px_34px_rgba(0,0,0,0.62)] sm:max-w-[24rem] md:max-w-[58rem]"
+          className="flex w-full max-w-[20rem] flex-col items-center overflow-visible text-center [text-shadow:0_2px_34px_rgba(0,0,0,0.62)] sm:max-w-[24rem] md:max-w-[68rem] lg:max-w-[72rem]"
         >
           <motion.h1
             variants={fadeUp}
-            className="max-w-[20rem] text-center font-serif text-[2rem] font-semibold leading-[1.14] tracking-normal [text-wrap:balance] sm:text-4xl sm:leading-[1.1] md:max-w-[15ch] md:text-[clamp(2.65rem,7vw,6.6rem)] md:leading-[0.98]"
+            className="w-full max-w-[20rem] overflow-visible whitespace-normal py-[0.04em] text-center font-serif text-[2rem] font-semibold leading-[1.14] tracking-normal [text-wrap:balance] sm:max-w-[24rem] sm:text-4xl sm:leading-[1.1] md:max-w-[68rem] md:py-[0.08em] md:text-[clamp(2.65rem,6.6vw,6.45rem)] md:leading-[1.12] lg:max-w-[72rem]"
           >
-            <span className="block">Systems Built for</span>
-            <span className="block">Those Ready to</span>
-            <span className="block text-gradient">Upgrade.</span>
+            <span className="md:hidden">
+              <span className="block">Systems Built for</span>
+              <span className="block">Those Ready to</span>
+              <span className="block text-gradient">Upgrade.</span>
+            </span>
+            <span className="hidden md:inline">
+              Systems Built for Those Ready to{" "}
+              <span className="whitespace-nowrap text-gradient">Upgrade.</span>
+            </span>
           </motion.h1>
 
           <motion.p

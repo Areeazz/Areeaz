@@ -139,15 +139,16 @@ const MOCKS: Record<ProjectVisual, () => React.JSX.Element> = {
 function ProjectPreview({ p }: { p: Project }) {
   if (p.id === "fettys" && p.image) {
     return (
-      <div className="absolute inset-0 grid place-items-center overflow-hidden bg-[linear-gradient(145deg,rgba(18,10,10,0.96),rgba(4,3,3,0.98))]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,90,74,0.18),transparent_48%),linear-gradient(180deg,rgba(255,225,218,0.055),transparent_58%)]" />
-        <div className="absolute inset-8 rounded-[1.35rem] border border-white/8 bg-black/24 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_90px_-50px_rgba(255,90,74,0.65)] backdrop-blur-md" />
-        <img
-          className="relative z-10 max-h-[78%] max-w-[82%] object-contain drop-shadow-[0_22px_42px_rgba(0,0,0,0.58)] transition-transform duration-700 ease-out group-hover:scale-[1.035] group-data-[active=true]:scale-[1.035]"
-          src={p.image}
-          alt={`${p.title.lead} ${p.title.accent} logo`}
-          loading="lazy"
-        />
+      <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(145deg,rgba(18,10,10,0.94),rgba(6,4,4,0.98))]">
+        <div className="absolute inset-x-6 inset-y-4 overflow-hidden md:inset-x-10 md:inset-y-8">
+          <img
+            className="absolute inset-0 object-contain brightness-125 contrast-110 drop-shadow-[0_20px_38px_rgba(0,0,0,0.48)]"
+            src={p.image}
+            alt={`${p.title.lead} ${p.title.accent} logo`}
+            loading="lazy"
+            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          />
+        </div>
       </div>
     );
   }
@@ -207,22 +208,12 @@ function ProjectCard({
           onActivate();
         }}
         onKeyDown={(event) => handlePanelKey(event, onActivate)}
-        className="group glass relative grid cursor-pointer overflow-hidden rounded-3xl transition-[transform,border-color,box-shadow,background-color] duration-500 hover:-translate-y-1.5 hover:border-white/20 hover:shadow-[0_36px_90px_-30px_rgba(255,90,74,0.45)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/45 data-[active=true]:-translate-y-1.5 data-[active=true]:border-white/20 data-[active=true]:shadow-[0_36px_90px_-30px_rgba(255,90,74,0.45)] md:grid-cols-[1.05fr_1fr]"
+        className="group glass relative grid cursor-pointer overflow-hidden rounded-2xl transition-[transform,border-color,box-shadow,background-color] duration-500 hover:-translate-y-1.5 hover:border-white/20 hover:shadow-[0_36px_90px_-30px_rgba(255,90,74,0.45)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/45 data-[active=true]:-translate-y-1.5 data-[active=true]:border-white/20 data-[active=true]:shadow-[0_36px_90px_-30px_rgba(255,90,74,0.45)] md:grid-cols-[1.05fr_1fr] md:rounded-3xl"
       >
       {/* visual */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-[#120808]">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(60% 50% at 50% 50%, rgba(255,90,74,0.1), transparent 70%)",
-          }}
-        />
-        <span className="absolute left-7 top-7 z-10 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-white/60 backdrop-blur-md">
-          {p.badge}
-        </span>
+      <div className="relative aspect-[16/10] overflow-hidden border-b border-white/10 bg-[#120808] md:aspect-[4/3] md:border-b-0 md:border-r">
         <a
-          className="absolute inset-6 overflow-hidden rounded-2xl border border-white/5 transition-transform duration-700 ease-out group-hover:scale-[1.03] group-data-[active=true]:scale-[1.03]"
+          className="absolute inset-0 overflow-hidden"
           href={p.liveUrl ?? "#"}
           target={hasLiveSite ? "_blank" : undefined}
           rel={hasLiveSite ? "noopener noreferrer" : undefined}
@@ -233,11 +224,11 @@ function ProjectCard({
       </div>
 
       {/* info */}
-      <div className="flex flex-col gap-6 border-t border-white/10 p-8 md:border-l md:border-t-0 md:p-11">
-        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">
+      <div className="flex flex-col gap-3.5 border-t border-white/10 p-[18px] md:gap-6 md:border-l md:border-t-0 md:p-11">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent md:text-[11px] md:tracking-[0.22em]">
           {p.index} / Selected Work
         </div>
-        <h3 className="font-serif text-[clamp(1.85rem,2.8vw,2.45rem)] font-medium leading-[1.05]">
+        <h3 className="font-serif text-[clamp(1.45rem,7.6vw,1.9rem)] font-medium leading-[1.08] md:text-[clamp(1.85rem,2.8vw,2.45rem)] md:leading-[1.05]">
           <TypewriterHeading
             lines={[
               [
@@ -247,19 +238,22 @@ function ProjectCard({
             ]}
           />
         </h3>
-        <p className="max-w-[46ch] text-[15px] leading-relaxed text-white/55">{p.description}</p>
+        <p className="max-w-[46ch] text-[12.5px] leading-[1.58] text-white/55 md:text-[15px] md:leading-relaxed">
+          <span className="md:hidden">{p.mobileDescription ?? p.description}</span>
+          <span className="hidden md:inline">{p.description}</span>
+        </p>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5 md:gap-2">
           {p.stack.map((s) => (
-            <span key={s} className="pill">
+            <span key={s} className="pill !px-2.5 !py-1.5 !text-[10px] md:!px-3 md:!py-[6px] md:!text-[11px]">
               {s}
             </span>
           ))}
         </div>
 
-        <div className="mt-auto flex flex-wrap gap-3 pt-3">
+        <div className="mt-auto flex flex-wrap gap-2 pt-1 md:gap-3 md:pt-3">
           <a
-            className="btn btn-ghost !px-4 !py-2.5 text-[12.5px] !text-accent-soft hover:!text-white"
+            className="btn btn-ghost !px-3.5 !py-2 text-[12px] !text-accent-soft hover:!text-white md:!px-4 md:!py-2.5 md:text-[12.5px]"
             href={p.liveUrl ?? "#"}
             target={hasLiveSite ? "_blank" : undefined}
             rel={hasLiveSite ? "noopener noreferrer" : undefined}
@@ -268,7 +262,7 @@ function ProjectCard({
             <ArrowUpRight />
           </a>
           <a
-            className="btn btn-ghost !px-4 !py-2.5 text-[12.5px]"
+            className="btn btn-ghost !px-3.5 !py-2 text-[12px] md:!px-4 md:!py-2.5 md:text-[12.5px]"
             href={p.githubUrl ?? "#"}
             target="_blank"
             rel="noopener noreferrer"
@@ -290,7 +284,7 @@ export default function Projects() {
   const [activeProject, setActiveProject] = useState<string | null>(null);
 
   return (
-    <section id="work" className="relative px-6 py-28 md:px-14 md:py-40">
+    <section id="work" className="relative px-5 py-16 md:px-14 md:py-40">
       <div className="orb left-[-6%] top-[8%] h-72 w-72 bg-accent-deep/30" />
       <div className="mx-auto max-w-7xl">
         <motion.div
@@ -298,7 +292,7 @@ export default function Projects() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: "-80px" }}
-          className="mb-16 flex flex-col justify-between gap-8 border-b border-white/10 pb-9 md:flex-row md:items-end"
+          className="mb-8 flex flex-col justify-between gap-5 border-b border-white/10 pb-7 md:mb-16 md:flex-row md:items-end md:gap-8 md:pb-9"
         >
           <div>
             <motion.div variants={fadeUp} className="section-tag">
@@ -308,7 +302,7 @@ export default function Projects() {
             </motion.div>
             <motion.h2
               variants={fadeUp}
-              className="mt-6 max-w-[16ch] font-serif text-[clamp(2.3rem,5vw,4.75rem)] font-semibold leading-[1]"
+              className="mt-5 max-w-[16ch] font-serif text-[clamp(2.05rem,10vw,2.7rem)] font-semibold leading-[1.04] md:mt-6 md:text-[clamp(2.3rem,5vw,4.75rem)] md:leading-[1]"
             >
               <TypewriterHeading
                 lines={[
@@ -318,9 +312,14 @@ export default function Projects() {
               />
             </motion.h2>
           </div>
-          <motion.p variants={fadeUp} className="max-w-[24rem] text-[15px] leading-relaxed text-white/50">
-            A focused look at the current featured build: a local-service platform
-            with a real launch path, mobile-first design, and booking flow.
+          <motion.p variants={fadeUp} className="max-w-[24rem] text-[13px] leading-[1.65] text-white/50 md:text-[15px] md:leading-relaxed">
+            <span className="md:hidden">
+              Current featured build with mobile-first design and booking flow.
+            </span>
+            <span className="hidden md:inline">
+              A focused look at the current featured build: a local-service platform
+              with a real launch path, mobile-first design, and booking flow.
+            </span>
           </motion.p>
         </motion.div>
 
@@ -329,7 +328,7 @@ export default function Projects() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: "-60px" }}
-          className="flex flex-col gap-8"
+          className="flex flex-col gap-5 md:gap-8"
         >
           {projects.map((p) => (
             <ProjectCard
