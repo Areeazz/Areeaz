@@ -74,7 +74,7 @@ export default function Hero() {
         >
           <motion.h1
             variants={fadeUp}
-            className="max-w-[15ch] text-center font-serif text-[2.1rem] font-semibold leading-[0.95] sm:text-4xl md:text-[clamp(2.65rem,7vw,6.6rem)] md:leading-[0.98]"
+            className="max-w-[20rem] text-center font-serif text-[2rem] font-semibold leading-[1.14] tracking-normal [text-wrap:balance] sm:text-4xl sm:leading-[1.1] md:max-w-[15ch] md:text-[clamp(2.65rem,7vw,6.6rem)] md:leading-[0.98]"
           >
             <span className="block">Systems Built for</span>
             <span className="block">Those Ready to</span>
